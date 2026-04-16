@@ -32,3 +32,12 @@ np.save('X_train.npy', X_train)
 np.save('y_train.npy', y_train)
 np.save('X_val.npy', X_val)
 np.save('y_val.npy', y_val)
+
+# ----- loading and preparing test data -----
+test_data = pd.read_csv('../../data/mimic_data/test_data.csv')
+X_test = get_sapbert_embeddings(test_data['TEXT'].tolist())
+y_test = test_data['ICD9_CODE'].notnull().astype(int).values
+
+# ----- saving the test data for later use -----
+np.save('X_test.npy', X_test)
+np.save('y_test.npy', y_test)
