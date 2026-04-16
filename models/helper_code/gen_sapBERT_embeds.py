@@ -4,12 +4,17 @@ from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModel
 import torch
 
+# Check if GPU is available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 # ----- setting up sapBERT tokenizer and model -----
-tokenizer = AutoTokenizer.from_pretrained("cambridgeltl/SapBERT-from-PubMedBERT-fulltext")
-model = AutoModel.from_pretrained("cambridgeltl/SapBERT-from-PubMedBERT-fulltext")
+local_model_path = "../helper_code/sapBERT_local_save"
+tokenizer = AutoTokenizer.from_pretrained(local_model_path, local_files_only=True)
+model = AutoModel.from_pretrained(local_model_path, local_files_only=True).to(device)
 
 def get_sapbert_embeddings(texts):
-    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
+    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512).to(device)
     with torch.no_grad():
         outputs = model(**inputs)
     return outputs.last_hidden_state[:, 0, :].numpy()
