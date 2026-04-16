@@ -1,8 +1,11 @@
+import sys
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModel
 import torch
+print('good imports')
+sys.exit()
 
 # Check if GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
