@@ -46,7 +46,7 @@ def main():
         'recall': [],
         'f1': [] 
     }
-    num_epochs = 5
+    num_epochs = 10
     for epoch in range(num_epochs):
         # ---- training loop -----
         model.train()
