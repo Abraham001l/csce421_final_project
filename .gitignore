@@ -3,5 +3,4 @@ project/data/
 __pycache__/
 
 # Ignore model files
-project/models/logistic_regression/logistic_model.joblib
 project/models/helper_code/sapBERT_local_save/
