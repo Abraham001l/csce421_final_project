@@ -9,6 +9,9 @@ import os
 import sys
 import matplotlib.pyplot as plt
 
+# prevent the tokenizer from deadlocking the Dataloader workers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(root_path)
 from helper_code.mimic_dataset import mimic_dataset
@@ -26,8 +29,8 @@ def main():
 
     # ----- create datasets and dataloaders -----
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
-    train_dataset = mimic_dataset(X_train, y_train, tokenizer, device=device)
-    val_dataset = mimic_dataset(X_val, y_val, tokenizer, device=device)
+    train_dataset = mimic_dataset(X_train, y_train, tokenizer)
+    val_dataset = mimic_dataset(X_val, y_val, tokenizer)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
