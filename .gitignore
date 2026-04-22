@@ -1,6 +1,7 @@
 project/data/
 .venv/
 __pycache__/
+*.sif
 
 # Ignore model files
 project/models/helper_code/sapBERT_local_save/
