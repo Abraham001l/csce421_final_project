@@ -8,8 +8,7 @@ from torch.utils.data import DataLoader
 import os
 import sys
 import matplotlib.pyplot as plt
-import tqdm
-
+from tqdm import tqdm
 # prevent the tokenizer from deadlocking the Dataloader workers
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -59,7 +58,7 @@ def main():
         # tqdm for progress bar
         train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
 
-        for texts_embeddings, labels in train_loader:
+        for texts_embeddings, labels in train_bar:
             # move data to device
             texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
             labels = labels.to(device).view(-1, 1)  # reshape labels to (batch_size, 1)
@@ -87,7 +86,7 @@ def main():
         val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
 
         with torch.no_grad():
-            for texts_embeddings, labels in val_loader:
+            for texts_embeddings, labels in val_bar:
                 texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
                 labels = labels.to(device).view(-1, 1)
                 outputs = model(texts_embeddings)
