@@ -1,11 +1,8 @@
 project/
 .venv/
 __pycache__/
-.dockerignore/
 .gitignore/
-Dockerfile
 README.md
-requirements.txt
 
 # Ignore model files
 project/models/helper_code/sapBERT_local_save/

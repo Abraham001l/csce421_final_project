@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import os
 import sys
 import matplotlib.pyplot as plt
+import tqdm
 
 # prevent the tokenizer from deadlocking the Dataloader workers
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -55,6 +56,9 @@ def main():
         model.train()
         total_train_loss = 0
 
+        # tqdm for progress bar
+        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
+
         for texts_embeddings, labels in train_loader:
             # move data to device
             texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
@@ -70,6 +74,7 @@ def main():
             optimizer.step()
 
             total_train_loss += loss.item()
+            train_bar.set_postfix(loss=loss.item())
 
         avg_train_loss = total_train_loss / len(train_loader)
 
@@ -77,6 +82,9 @@ def main():
         model.eval()
         total_val_loss = 0
         tp, fp, tn, fn = 0, 0, 0, 0
+
+        # tqdm for progress bar
+        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
 
         with torch.no_grad():
             for texts_embeddings, labels in val_loader:
@@ -95,6 +103,8 @@ def main():
                 fp += ((predictions == 1) & (targets == 0)).sum().item()
                 tn += ((predictions == 0) & (targets == 0)).sum().item()
                 fn += ((predictions == 0) & (targets == 1)).sum().item()
+
+                val_bar.set_postfix(loss=loss.item())
 
         avg_val_loss = total_val_loss / len(val_loader)
 
