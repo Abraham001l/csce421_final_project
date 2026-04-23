@@ -31,12 +31,13 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
     train_dataset = mimic_dataset(X_train, y_train, tokenizer)
     val_dataset = mimic_dataset(X_val, y_val, tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=4, pin_memory=True)
 
     # ----- initialize the model, loss function, and optimizer -----
     model = transformer_ff(device=device)
     model.to(device)
+    scaler = torch.amp.GradScaler('cuda')  # for mixed precision training
     criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3)
 
@@ -65,12 +66,14 @@ def main():
 
             # forward pass
             optimizer.zero_grad()
-            outputs = model(texts_embeddings)
-            loss = criterion(outputs, labels)
+            with torch.amp.autocast(device_type=device.type):
+                outputs = model(texts_embeddings)
+                loss = criterion(outputs, labels)
 
             # backward pass
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward() # scale up loss to keep gradient in range of float16
+            scaler.step(optimizer) # unscale gradients to update weights properly
+            scaler.update() # update the scale factor for next iteration
 
             total_train_loss += loss.item()
             train_bar.set_postfix(loss=loss.item())

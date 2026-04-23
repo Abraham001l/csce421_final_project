@@ -1,0 +1,5 @@
+num_workers > 0:
+paralize across cpus to feed memory faster to gpu
+pin_memory = True:
+given DMA access to gpu for data so no intermidiate OS buffer is 
+needed when passing transformer tokens to transformer in gpu

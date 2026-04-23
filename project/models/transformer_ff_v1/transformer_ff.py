@@ -19,6 +19,7 @@ class transformer_ff(nn.Module):
     
     def forward(self, texts_embeddings):
         with torch.no_grad():
-            outputs = self.sapbert(**texts_embeddings)
+            with torch.amp.autocast(device_type=self.device.type):
+                outputs = self.sapbert(**texts_embeddings)
         cls_embeddings = outputs.last_hidden_state[:, 0, :]
-        return self.ff(cls_embeddings)
+        return self.ff(cls_embeddings).float()
