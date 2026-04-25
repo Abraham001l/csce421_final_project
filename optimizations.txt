@@ -3,3 +3,5 @@ paralize across cpus to feed memory faster to gpu
 pin_memory = True:
 given DMA access to gpu for data so no intermidiate OS buffer is 
 needed when passing transformer tokens to transformer in gpu
+using fp16 for intermidiate calcs:
+A100 is optimized for fp16 rather then fp32
