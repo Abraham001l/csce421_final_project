@@ -31,7 +31,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
     train_dataset = mimic_dataset(X_train, y_train, tokenizer)
     val_dataset = mimic_dataset(X_val, y_val, tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
 
     # ----- initialize the model, loss function, and optimizer -----
@@ -39,7 +39,7 @@ def main():
     model.to(device)
     scaler = torch.amp.GradScaler('cuda')  # for mixed precision training
     criterion = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3)
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
 
     # ----- training and validation loop -----

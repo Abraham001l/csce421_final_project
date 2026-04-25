@@ -3,7 +3,7 @@ import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
 class transformer_ff(nn.Module):
-    def __init__(self, dropout=0.2, hidden1_size=256, device=None):
+    def __init__(self, dropout=0.2, hidden1_size=256, hidden2_size=128, device=None):
         super(transformer_ff, self).__init__()
 
         self.device = device
@@ -12,9 +12,12 @@ class transformer_ff(nn.Module):
 
         self.ff = nn.Sequential(
             nn.Linear(768, hidden1_size),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden1_size, 1),
+            nn.Linear(hidden1_size, hidden2_size),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden2_size, 1),
         )
     
     def forward(self, texts_embeddings):
