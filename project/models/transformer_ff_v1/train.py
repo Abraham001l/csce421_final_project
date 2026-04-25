@@ -31,8 +31,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
     train_dataset = mimic_dataset(X_train, y_train, tokenizer)
     val_dataset = mimic_dataset(X_val, y_val, tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
 
     # ----- initialize the model, loss function, and optimizer -----
     model = transformer_ff(device=device)
@@ -40,6 +40,7 @@ def main():
     scaler = torch.amp.GradScaler('cuda')  # for mixed precision training
     criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
 
     # ----- training and validation loop -----
     # lists to store metrics for plotting
@@ -109,6 +110,8 @@ def main():
                 val_bar.set_postfix(loss=loss.item())
 
         avg_val_loss = total_val_loss / len(val_loader)
+        scheduler.step(avg_val_loss)  # adjust learning rate based on validation loss
+        current_lr = optimizer.param_groups[0]['lr']
 
         # calculating precision, recall, and F1 score
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0
@@ -122,7 +125,7 @@ def main():
         history['recall'].append(recall)
         history['f1'].append(f1)
 
-        print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f} - Precision: {precision:.4f} - Recall: {recall:.4f} - F1 Score: {f1:.4f}")
+        print(f"Epoch {epoch+1}/{num_epochs} - LR: {current_lr:.6f} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f} - Precision: {precision:.4f} - Recall: {recall:.4f} - F1 Score: {f1:.4f}")
 
         model_path = f'../../results/transformer_ff_v1/model_epoch_{epoch+1}.pth'
         torch.save(model.state_dict(), model_path)
