@@ -11,7 +11,7 @@ def precompute_embeddings():
     print(f"Using device: {device}")
 
     # 1. Load your raw data
-    data = pd.read_csv('../../data/mimic_data/train_data.csv')
+    data = pd.read_csv('../../data/mimic_data/test_data.csv')
     
     X = data['TEXT'].tolist()
     y = data['ICD9_CODE'].astype(int).values
@@ -52,8 +52,8 @@ def precompute_embeddings():
 
     # 4. Save to disk natively
     save_dir = '../../data/mimic_data/'
-    torch.save(final_embeddings, os.path.join(save_dir, 'train_sapbert_embeddings.pt'))
-    torch.save(final_labels, os.path.join(save_dir, 'train_sapbert_labels.pt'))
+    torch.save(final_embeddings, os.path.join(save_dir, 'test_sapbert_embeddings.pt'))
+    torch.save(final_labels, os.path.join(save_dir, 'test_sapbert_labels.pt'))
     
     print(f"Saved {final_embeddings.shape[0]} embeddings of size {final_embeddings.shape[1]}!")
 

@@ -21,7 +21,7 @@ sys.path.append(root_path)
 from helper_code.mimic_dataset import mimic_dataset
 from transformer_ff import transformer_ff
 
-def objective(trial, train_loader, val_loader, device):
+def objective(trial, train_loader, val_loader, device, use_precomputed=False):
     """
     Optuna objective function. Trains the model with a specific set of 
     hyperparameters and returns the validation metric to optimize.
@@ -38,7 +38,8 @@ def objective(trial, train_loader, val_loader, device):
         dropout=dropout, 
         hidden1_size=hidden1_size, 
         hidden2_size=hidden2_size, 
-        device=device
+        device=device,
+        load_sapbert=(not use_precomputed)
     )
     model.to(device)
     
@@ -121,22 +122,31 @@ def main():
     print(f"Using device: {device}")
 
     # ----- load and subsample data (10%) -----
-    data = pd.read_csv('../../data/mimic_data/train_data.csv')
-    # sample only 10% of the dataset to speed up tuning
-    data = data.sample(frac=0.1, random_state=42)
-    print(f"Running tuning on a 10% subset: {len(data)} total rows.")
-    
-    X = data['TEXT'].tolist()
-    y = data['ICD9_CODE'].astype(int).values
+    use_precomputed = True  # Set to False to compute embeddings on the fly (not recommended for large datasets)
+    X, y = None, None
+    if use_precomputed:
+        print("Loading precomputer embeddings...")
+        X = torch.load('../../data/mimic_data/train_sapbert_embeddings.pt')
+        y = torch.load('../../data/mimic_data/train_sapbert_labels.pt')
+        # sampling 10% of the dataset to speed up tuning
+        indices = torch.randperm(len(X))[:len(X) // 10]
+        X = X[indices]
+        y = y[indices]
+    else:
+        data = pd.read_csv('../../data/mimic_data/train_data.csv')
+        # sample only 10% of the dataset to speed up tuning
+        data = data.sample(frac=0.1, random_state=42)
+        X = data['TEXT'].tolist()
+        y = data['ICD9_CODE'].astype(int).values
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # ----- create datasets and dataloaders once -----
     # Moving this outside the objective function prevents tokenizing the dataset 
     # from scratch on every single hyperparameter trial.
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
-    train_dataset = mimic_dataset(X_train, y_train, tokenizer)
-    val_dataset = mimic_dataset(X_val, y_val, tokenizer)
-    
+    train_dataset = mimic_dataset(X_train, y_train, tokenizer, precomputed=use_precomputed)
+    val_dataset = mimic_dataset(X_val, y_val, tokenizer, precomputed=use_precomputed)
+
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
 
@@ -153,7 +163,7 @@ def main():
 
     print("Starting Hyperband Tuning...")
     # Wrap the objective in a lambda to pass in our pre-loaded data
-    study.optimize(lambda trial: objective(trial, train_loader, val_loader, device), n_trials=20)
+    study.optimize(lambda trial: objective(trial, train_loader, val_loader, device, use_precomputed), n_trials=20)
 
     # ----- output results -----
     print("\n--- Hyperband Tuning Completed ---")
