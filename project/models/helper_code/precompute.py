@@ -32,7 +32,7 @@ def precompute_embeddings():
 
     print("Pre-computing sapBERT embeddings...")
     with torch.no_grad():
-        for texts_dict, labels in tqdm(dataloader):
+        for texts_dict, labels in tqdm(dataloader, leave=False):
             # Move inputs to GPU
             texts_dict = {key: val.to(device) for key, val in texts_dict.items()}
             
