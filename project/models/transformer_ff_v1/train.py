@@ -21,21 +21,35 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
+    use_precomputed = True  # Set to False to compute embeddings on the fly (not recommended for large datasets)  
+
     # ----- load the training and validation data -----
-    data = pd.read_csv('../../data/mimic_data/train_data.csv')
-    X = data['TEXT'].tolist()
-    y = data['ICD9_CODE'].astype(int).values
+    X, y = None, None
+    if use_precomputed:
+        print("Loading precomputed embeddings...")
+        X = torch.load('../../data/mimic_data/train_sapbert_embeddings.pt')
+        y = torch.load('../../data/mimic_data/train_sapbert_labels.pt')
+    else:
+        data = pd.read_csv('../../data/mimic_data/train_data.csv')
+        X = data['TEXT'].tolist()
+        y = data['ICD9_CODE'].astype(int).values
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # ----- create datasets and dataloaders -----
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
-    train_dataset = mimic_dataset(X_train, y_train, tokenizer)
-    val_dataset = mimic_dataset(X_val, y_val, tokenizer)
+    train_dataset = mimic_dataset(X_train, y_train, tokenizer, precomputed=use_precomputed)
+    val_dataset = mimic_dataset(X_val, y_val, tokenizer, precomputed=use_precomputed)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
 
     # ----- initialize the model, loss function, and optimizer -----
-    model = transformer_ff(device=device)
+    model = transformer_ff(
+        dropout=0.2, 
+        hidden1_size=256, 
+        hidden2_size=128, 
+        device=device,
+        load_sapbert=(not use_precomputed)
+    )
     model.to(device)
     scaler = torch.amp.GradScaler('cuda')  # for mixed precision training
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -62,7 +76,10 @@ def main():
 
         for texts_embeddings, labels in train_bar:
             # move data to device
-            texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+            if (not use_precomputed):
+                texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+            else:
+                texts_embeddings = texts_embeddings.to(device)
             labels = labels.to(device).view(-1, 1)  # reshape labels to (batch_size, 1)
 
             # forward pass
@@ -91,7 +108,10 @@ def main():
 
         with torch.no_grad():
             for texts_embeddings, labels in val_bar:
-                texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+                if (not use_precomputed):
+                    texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+                else:
+                    texts_embeddings = texts_embeddings.to(device)
                 labels = labels.to(device).view(-1, 1)
                 outputs = model(texts_embeddings)
                 loss = criterion(outputs, labels)

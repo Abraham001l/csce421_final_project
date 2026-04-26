@@ -3,23 +3,28 @@ import torch
 from transformers import AutoTokenizer
 
 class mimic_dataset(Dataset):
-    def __init__(self, text, labels, tokenizer):
+    def __init__(self, text, labels, tokenizer, precomuted=False):
         self.text = text
         self.labels = labels
         self.tokenizer = tokenizer
+        self.precomputed = precomuted
 
     def __len__(self):
         return len(self.text)
     
     def __getitem__(self, idx):
-        text = self.text[idx]
+        label = torch.tensor(self.labels[idx], dtype=torch.float32)
 
+        if self.precomputed:
+            item = self.data[idx].clone().detach()
+            return item, label
+        
+        text = self.text[idx]
         encoding = self.tokenizer(text, 
                                   padding='max_length', 
                                   truncation=True, 
                                   return_tensors='pt', 
                                   max_length=512)
-        
         item = {key: val.squeeze(0) for key, val in encoding.items()}
-        label = torch.tensor(self.labels[idx], dtype=torch.float32)
+        
         return item, label
