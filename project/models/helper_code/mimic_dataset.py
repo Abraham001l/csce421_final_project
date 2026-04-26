@@ -16,7 +16,7 @@ class mimic_dataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.float32)
 
         if self.precomputed:
-            item = self.data[idx].clone().detach()
+            item = self.text[idx].clone().detach()
             return item, label
         
         text = self.text[idx]
