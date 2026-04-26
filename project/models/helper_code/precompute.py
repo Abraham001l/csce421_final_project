@@ -4,8 +4,7 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
-
-from helper_code.mimic_dataset import mimic_dataset
+from mimic_dataset import mimic_dataset
 
 def precompute_embeddings():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,7 +25,7 @@ def precompute_embeddings():
     # 3. Create a Dataloader (precomputed=False to tokenize raw text)
     dataset = mimic_dataset(X, y, tokenizer, precomputed=False)
     # Batch size can be larger since we aren't storing gradients
-    dataloader = DataLoader(dataset, batch_size=128, shuffle=False, num_workers=8, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
 
     all_embeddings = []
     all_labels = []

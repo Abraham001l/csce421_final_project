@@ -3,11 +3,11 @@ import torch
 from transformers import AutoTokenizer
 
 class mimic_dataset(Dataset):
-    def __init__(self, text, labels, tokenizer, precomuted=False):
+    def __init__(self, text, labels, tokenizer, precomputed=False):
         self.text = text
         self.labels = labels
         self.tokenizer = tokenizer
-        self.precomputed = precomuted
+        self.precomputed = precomputed
 
     def __len__(self):
         return len(self.text)
