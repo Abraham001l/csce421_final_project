@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import pandas as pd
@@ -9,6 +10,7 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 import optuna
 from optuna.pruners import HyperbandPruner
+from tqdm import tqdm
 
 # prevent the tokenizer from deadlocking the Dataloader workers
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -52,7 +54,10 @@ def objective(trial, train_loader, val_loader, device):
     for epoch in range(num_epochs):
         # --- train ---
         model.train()
-        for texts_embeddings, labels in train_loader:
+
+        train_bar = tqdm(train_loader, desc=f"Trial {trial.number} - Epoch {epoch}", leave=False)
+
+        for texts_embeddings, labels in train_bar:
             texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
             labels = labels.to(device).view(-1, 1)
 
@@ -65,10 +70,14 @@ def objective(trial, train_loader, val_loader, device):
             scaler.step(optimizer)
             scaler.update()
 
+            train_bar.set_postfix(loss=loss.item())
+
         # --- evaluate ---
         model.eval()
         total_val_loss = 0
         tp, fp, tn, fn = 0, 0, 0, 0
+
+        val_bar = tqdm(val_loader, desc=f"Trial {trial.number} - Validation", leave=False)
 
         with torch.no_grad():
             for texts_embeddings, labels in val_loader:
@@ -85,6 +94,8 @@ def objective(trial, train_loader, val_loader, device):
                 fp += ((predictions == 1) & (targets == 0)).sum().item()
                 tn += ((predictions == 0) & (targets == 0)).sum().item()
                 fn += ((predictions == 0) & (targets == 1)).sum().item()
+
+                val_bar.set_postfix(loss=loss.item())
 
         avg_val_loss = total_val_loss / len(val_loader)
         scheduler.step(avg_val_loss)
@@ -137,6 +148,9 @@ def main():
     # change this to "minimize" and return avg_val_loss in the objective.
     study = optuna.create_study(direction="maximize", pruner=pruner)
     
+    # setting optuna logger
+    optuna.logging.get_logger("optuna").setLevel(optuna.logging.INFO)
+
     print("Starting Hyperband Tuning...")
     # Wrap the objective in a lambda to pass in our pre-loaded data
     study.optimize(lambda trial: objective(trial, train_loader, val_loader, device), n_trials=20)
