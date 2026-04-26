@@ -72,7 +72,7 @@ def main():
         total_train_loss = 0
 
         # tqdm for progress bar
-        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
+        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]", leave=False)
 
         for texts_embeddings, labels in train_bar:
             # move data to device
@@ -104,7 +104,7 @@ def main():
         tp, fp, tn, fn = 0, 0, 0, 0
 
         # tqdm for progress bar
-        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
+        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]", leave=False)
 
         with torch.no_grad():
             for texts_embeddings, labels in val_bar:
@@ -113,8 +113,9 @@ def main():
                 else:
                     texts_embeddings = texts_embeddings.to(device)
                 labels = labels.to(device).view(-1, 1)
-                outputs = model(texts_embeddings)
-                loss = criterion(outputs, labels)
+                with torch.amp.autocast(device_type=device.type):
+                    outputs = model(texts_embeddings)
+                    loss = criterion(outputs, labels)
                 total_val_loss += loss.item()
 
                 # getting prediction and target (flattening with .view(-1))

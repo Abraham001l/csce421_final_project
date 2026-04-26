@@ -59,7 +59,10 @@ def objective(trial, train_loader, val_loader, device, use_precomputed=False):
         train_bar = tqdm(train_loader, desc=f"Trial {trial.number} - Epoch {epoch}", leave=False)
 
         for texts_embeddings, labels in train_bar:
-            texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+            if (not use_precomputed):
+                texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+            else:
+                texts_embeddings = texts_embeddings.to(device)
             labels = labels.to(device).view(-1, 1)
 
             optimizer.zero_grad()
@@ -82,10 +85,14 @@ def objective(trial, train_loader, val_loader, device, use_precomputed=False):
 
         with torch.no_grad():
             for texts_embeddings, labels in val_loader:
-                texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+                if (not use_precomputed):
+                    texts_embeddings = {key: val.to(device) for key, val in texts_embeddings.items()}
+                else:
+                    texts_embeddings = texts_embeddings.to(device)
                 labels = labels.to(device).view(-1, 1)
-                outputs = model(texts_embeddings)
-                loss = criterion(outputs, labels)
+                with torch.amp.autocast(device_type=device.type):
+                    outputs = model(texts_embeddings)
+                    loss = criterion(outputs, labels)
                 total_val_loss += loss.item()
 
                 predictions = (outputs > 0).int().view(-1)
@@ -163,7 +170,7 @@ def main():
 
     print("Starting Hyperband Tuning...")
     # Wrap the objective in a lambda to pass in our pre-loaded data
-    study.optimize(lambda trial: objective(trial, train_loader, val_loader, device, use_precomputed), n_trials=20)
+    study.optimize(lambda trial: objective(trial, train_loader, val_loader, device, use_precomputed), n_trials=250)
 
     # ----- output results -----
     print("\n--- Hyperband Tuning Completed ---")
