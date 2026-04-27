@@ -39,21 +39,21 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("../helper_code/sapBERT_local_save", local_files_only=True)
     train_dataset = mimic_dataset(X_train, y_train, tokenizer, precomputed=use_precomputed)
     val_dataset = mimic_dataset(X_val, y_val, tokenizer, precomputed=use_precomputed)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, pin_memory=False)
+    val_loader = DataLoader(val_dataset, batch_size=2048, shuffle=False, num_workers=0, pin_memory=False)
 
     # ----- initialize the model, loss function, and optimizer -----
     model = transformer_ff(
-        dropout=0.2, 
-        hidden1_size=256, 
-        hidden2_size=128, 
+        dropout=0.235, 
+        hidden1_size=512, 
+        hidden2_size=64, 
         device=device,
         load_sapbert=(not use_precomputed)
     )
     model.to(device)
     scaler = torch.amp.GradScaler('cuda')  # for mixed precision training
     criterion = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3, weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=0.00015, weight_decay=0.0055)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
 
     # ----- training and validation loop -----
