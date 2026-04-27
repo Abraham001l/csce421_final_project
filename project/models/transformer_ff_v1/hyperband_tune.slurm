@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ##NECESSARY JOB SPECIFICATIONS
-#SBATCH --job-name=train_tff_v1
-#SBATCH --time=01:00:00
+#SBATCH --job-name=hyperband_tune
+#SBATCH --time=06:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8          # <--- This requests 8 cores for your 1 $
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=gpu
-#SBATCH --output=train_tff_v1.%j
+#SBATCH --output=hyperband_tune.%j
 
 cd ..
 cd ..
