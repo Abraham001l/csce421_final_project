@@ -2,6 +2,7 @@ project/data/
 .venv/
 __pycache__/
 *.sif
+slurm_outs/
 
 # Ignore model files
 project/models/helper_code/sapBERT_local_save/
