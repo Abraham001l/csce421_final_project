@@ -55,7 +55,8 @@ def main():
     for workers in worker_counts:
         # Create a fresh dataloader for each test
         loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
-                            num_workers=workers, pin_memory=False)
+                            num_workers=workers, pin_memory=True,
+                            non_blocking=True)
         
         start_time = time.time()
         for i, (texts_embeddings, labels) in enumerate(loader):
@@ -77,7 +78,8 @@ def main():
     print("\n=== PHASE 2: VRAM Memory Profiling ===")
     # Re-create dataloader with the optimal workers
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
-                              num_workers=best_workers, pin_memory=False)
+                              num_workers=best_workers, pin_memory=True,
+                              non_blocking=True)
 
     model = transformer_ff(
         dropout=0.2, 
