@@ -23,11 +23,11 @@ def main():
     print(f"Using device: {device}")
 
     # ----- configuration -----
-    use_precomputed = True  # Added to match train code
+    use_precomputed = False  # Added to match train code
     
     # Update this to the specific epoch you want to test (e.g., your best epoch)
     model_path = '../../results/transformer_ff_v1/model_epoch_7.pth'
-    test_data_path = '../../data/mimic_data/test_data.csv' 
+    test_data_path = '../../data/class_test_data.csv' 
     results_dir = '../../results/transformer_ff_v1'
 
     # ----- load the testing data -----
@@ -52,8 +52,7 @@ def main():
     # Added precomputed argument to dataset
     test_dataset = mimic_dataset(X_test, y_test, tokenizer, precomputed=use_precomputed)
     
-    # shuffle=false is standard for testing. 
-    # Switched num_workers to 0 to match train code and avoid Windows multiprocessing issues
+    # shuffle=False is strictly set here to ensure predictions align perfectly with the input data order
     test_loader = DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=0, pin_memory=False)
 
     # ----- initialize the model, loss, and load weights -----
@@ -71,7 +70,7 @@ def main():
          print(f"Error: Could not find model weights at {model_path}")
          return
     print(f"Loading model weights from: {model_path}")
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.load_state_dict(torch.load(model_path, map_location=device), strict=False)  # strict=False allows loading even if some keys are missing
     model.to(device)
     
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -134,7 +133,6 @@ def main():
     
     try:
         # calculate ROC-AUC score 
-        # note: We pass raw logit outputs here as sklearn handles the thresholding/ranking internally
         roc_auc = roc_auc_score(all_targets, all_outputs)
         print("-" * 50)
         print(f"ROC-AUC Score: {roc_auc:.4f}")
@@ -153,7 +151,7 @@ def main():
         plt.legend(loc="lower right")
         plt.grid(alpha=0.3)
         
-        plot_path = os.path.join(results_dir, 'roc_curve.png')
+        plot_path = os.path.join(results_dir, 'class_roc_curve.png')
         plt.savefig(plot_path, bbox_inches='tight')
         plt.close()
         print(f"\nROC curve saved successfully to {plot_path}")
@@ -162,6 +160,19 @@ def main():
         # Fails gracefully if there's only one class present in the test subset
         print("-" * 50)
         print("ROC-AUC Score: N/A (Only one class present in testing data)")
+
+    # ----- Save Predictions to CSV -----
+    # Create a dataframe with 0-indexed row_ids and the integer predictions
+    results_df = pd.DataFrame({
+        'row_id': range(len(all_predictions)),
+        'prediction': [int(p) for p in all_predictions]  # ensuring they are standard python ints
+    })
+    
+    csv_save_path = os.path.join(results_dir, 'predictions.csv')
+    
+    # index=False prevents pandas from writing its own arbitrary index column
+    results_df.to_csv(csv_save_path, index=False)
+    print(f"Predictions successfully saved to: {csv_save_path}")
 
 if __name__ == "__main__":
     # avoiding child process spawning issues on Windows
